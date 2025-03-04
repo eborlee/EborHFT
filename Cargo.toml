@@ -7,5 +7,12 @@ edition = "2024"
 name = "test1"
 path = "bins/test1.rs"
 
+[workspace]
+members = [
+    "crates/common",
+    "crates/event_engine",
+    "crates/market_agent",
+]
 
 [dependencies]
+market_agent = { path = "crates/market_agent" }

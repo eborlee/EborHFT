@@ -3,5 +3,20 @@
 version = 4
 
 [[package]]
+name = "common"
+version = "0.1.0"
+
+[[package]]
 name = "eborhft"
+version = "0.1.0"
+dependencies = [
+ "market_agent",
+]
+
+[[package]]
+name = "event_engine"
+version = "0.1.0"
+
+[[package]]
+name = "market_agent"
 version = "0.1.0"
