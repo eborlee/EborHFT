@@ -9,18 +9,20 @@ This project is a high-frequency trading component developed in Rust. It leverag
 
 - **Event-Driven Architecture:** Utilizes an event-driven engine for robust and scalable real-time data handling.
 - **WebSocket Integration:** Implements WebSocket for real-time market data acquisition.
-- **Ring Buffer:** Uses a ring buffer for efficient data storage and processing.
+- **Ring Buffer:** Efficiently leverages a ring buffer that operates lock-free and asynchronously in a Single Producer Single Consumer (SPSC) manner for optimal data storage and processing.
+
 - **Exchange Adaptation:** Adapts to multiple exchanges (e.g., Binance) with dedicated interfaces for API communication and data parsing.
 - **Order Book Maintenance:** Provides a component to maintain and update order book information.
 
 ---
 
-**Installation and Usage**
 
-### Prerequisites
+
+**Prerequisites**
 - CentOS
 - rustc 1.85.0
 
+**Installation and Usage**
 1. Clone the Repository
 
    ```bash
