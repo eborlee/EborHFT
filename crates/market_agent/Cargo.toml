@@ -5,3 +5,6 @@ edition = "2024"
 
 
 [dependencies]
+ringbuf = { workspace = true }  # 让 sublib 使用 workspace 共享的 ringbuf
+serde = { workspace = true }
+chrono = { workspace = true }

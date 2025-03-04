@@ -3,10 +3,6 @@ name = "eborhft"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "test1"
-path = "bins/test1.rs"
-
 [workspace]
 members = [
     "crates/common",
@@ -16,3 +12,27 @@ members = [
 
 [dependencies]
 market_agent = { path = "crates/market_agent" }
+event_engine = { path = "crates/event_engine" }
+chrono = "0.4"
+
+
+[workspace.dependencies]
+ringbuf = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+
+
+
+# 二进制文件
+[[bin]]
+name = "test1"
+path = "bins/test1.rs"
+
+[[bin]]
+name = "test2"
+path = "bins/test2.rs"
+
+[[bin]]
+name = "test_event_dispatcher"
+path = "bins/test/test_event_dispatcher.rs"
