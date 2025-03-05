@@ -8,12 +8,18 @@ members = [
     "crates/common",
     "crates/event_engine",
     "crates/market_agent",
+    "crates/feeder"
 ]
 
 [dependencies]
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
+feeder = { path = "crates/feeder" }
 chrono = "0.4"
+ringbuf = "0.2"
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["macros", "net", "time","rt-multi-thread"] }
+tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 
 
 [workspace.dependencies]
@@ -21,6 +27,11 @@ ringbuf = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = "0.4"
+async-trait = "0.1"
+futures-util = "0.3"
+tokio = { version = "1.0", features = ["macros", "net", "time","rt-multi-thread"] }
+tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
+url = "2.2"
 
 
 
@@ -36,3 +47,11 @@ path = "bins/test2.rs"
 [[bin]]
 name = "test_event_dispatcher"
 path = "bins/test/test_event_dispatcher.rs"
+
+[[bin]]
+name = "test_ws_ee_logic"
+path = "bins/test/test_ws_ee_logic.rs"
+
+[[bin]]
+name = "test_bws"
+path = "bins/test/test_bws.rs"
