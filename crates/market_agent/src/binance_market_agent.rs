@@ -42,12 +42,13 @@ pub struct BinanceMarketAgent {
 impl MarketAgent for BinanceMarketAgent {
     async fn start(&self) -> Result<(), Box<dyn Error + Send>> {
         // 注册消息回调，将收到的文本消息判断是否包含 "depth"，若是则调用 on_depth 回调
-        let agent_clone = self.clone();
+        let agent_clone = Arc::new(self.clone());
         {
+            let ws_agent = Arc::clone(&agent_clone);
             let mut ws = self.ws.lock().await;
             ws.set_message_callback(move |msg: String| {
                 let received_timestamp = get_timestamp_us();
-                let agent = agent_clone.clone();
+                let agent = Arc::clone(&ws_agent);
                 
                 tokio::spawn(async move {
                     let event: Result<BinanceEvent, SerdeError> = serde_json::from_str(&msg);
