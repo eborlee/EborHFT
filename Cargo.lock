@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "adapter"
+version = "0.1.0"
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,6 +212,8 @@ dependencies = [
  "feeder",
  "market_agent",
  "ringbuf",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-tungstenite",
 ]
@@ -229,6 +235,7 @@ dependencies = [
  "chrono",
  "ringbuf",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

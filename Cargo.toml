@@ -8,12 +8,14 @@ members = [
     "crates/common",
     "crates/event_engine",
     "crates/market_agent",
-    "crates/feeder"
-]
+    "crates/feeder",
+    "crates/adapter"]
 
 [dependencies]
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 feeder = { path = "crates/feeder" }
 chrono = "0.4"
 ringbuf = "0.2"
@@ -62,3 +64,7 @@ path = "bins/test/test_bws.rs"
 [[bin]]
 name = "test_bma"
 path = "bins/test/test_bma.rs"
+
+[[bin]]
+name = "test_event_type"
+path = "bins/test/test_event_type.rs"

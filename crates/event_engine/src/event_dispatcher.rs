@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use ringbuf::{RingBuffer, Producer, Consumer};
 
+use serde_json::Value;
 
 use crate::event::EventType;
+use crate::event::EventPayload;
 
 #[derive(Debug)]
 pub struct EventData {
     pub event_type: EventType,
-    pub data: Vec<String>,
+    pub data: EventPayload,
 }
 
 
@@ -21,7 +23,7 @@ pub trait EventDispatcher {
     fn m_trigger(&self, event: EventData);
 }
 
-pub struct QueueEventDispatcher {
+pub struct QueueEventDispatcher{
     event_map: HashMap<EventType, Vec<Box<dyn Fn(&EventData)+ Send + Sync >>>,
     producer: Producer<EventData>, // 生产者（写入数据）
     event_queue: Consumer<EventData>,    // 消费者（读取数据）
@@ -42,21 +44,21 @@ impl QueueEventDispatcher {
 
     // 事件入队（不带参数）
     fn enqueue(&mut self, data: EventData) {
-        if self.producer.is_full() {
-            println!("Warning: Event queue is full. The oldest event will be overwritten.");
-            self.event_queue.pop(); // 丢弃最早的事件
-        }
+        // if self.producer.is_full() {
+        //     println!("Warning: Event queue is full. The oldest event will be overwritten.");
+        //     self.event_queue.pop(); // 丢弃最早的事件
+        // }
         let _ = self.producer.push(data);
     }
 
     // 事件入队（带参数）
-    fn enqueue_with_args<U: ToString>(&mut self, event_type: EventType, args: Vec<U>) {
-        let data = EventData {
-            event_type,
-            data: args.into_iter().map(|arg| arg.to_string()).collect(),
-        };
-        self.enqueue(data);
-    }
+    // fn enqueue_with_args<U: ToString>(&mut self, event_type: EventType, args: Vec<U>) {
+    //     let data = EventData {
+    //         event_type,
+    //         data: args.into_iter().map(|arg| arg.to_string()).collect(),
+    //     };
+    //     self.enqueue(data);
+    // }
 
     pub fn process(&mut self) {
         while let Some(event) = self.event_queue.pop() {
@@ -64,8 +66,9 @@ impl QueueEventDispatcher {
         }
     }
 
-    pub fn fire<U: ToString>(&mut self, event_type: EventType, data: Vec<U>) {
-        self.enqueue_with_args(event_type, data);
+    pub fn fire(&mut self, event_type: EventType, data: EventPayload) {
+        let event = EventData { event_type, data };
+        self.enqueue(event);
     }
 
 
@@ -152,17 +155,19 @@ impl QueueEventDispatcherProducer {
         let _ = self.producer.push(data);
     }
 
-    // 事件入队（带参数）
-    fn enqueue_with_args<U: ToString>(&mut self, event_type: EventType, args: Vec<U>) {
-        let data = EventData {
-            event_type,
-            data: args.into_iter().map(|arg| arg.to_string()).collect(),
-        };
-        self.enqueue(data);
-    }
+    // // 事件入队（带参数）
+    // fn enqueue_with_args(&mut self, event_type: EventType, args: Vec) {
+    //     // let data = EventData {
+    //     //     event_type,
+    //     //     data: args.into_iter().map(|arg| arg.to_string()).collect(),
+    //     // };
+    //     let data = EventData { event_type, data: args };
+    //     self.enqueue(data);
+    // }
 
-    pub fn fire<U: ToString>(&mut self, event_type: EventType, data: Vec<U>) {
-        self.enqueue_with_args(event_type, data);
+    pub fn fire(&mut self, event_type: EventType, data: EventPayload) {
+        let event = EventData { event_type, data };
+        self.enqueue(event);
     }
 }
 

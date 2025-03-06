@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use feeder::websocket::BinanceWebSocketClient;
+use event_engine::event;
 use event_engine::event::EventType;
 use event_engine::event_dispatcher::QueueEventDispatcherProducer;
 use std::sync::Arc;
@@ -15,10 +16,10 @@ pub trait MarketAgent: Send + Sync {
     async fn start(&self) -> Result<(), Box<dyn Error + Send>>;
 
     /// 收到深度数据时的回调，将原始数据解析后入队事件
-    async fn on_depth(&self, raw_data: String);
+    async fn on_depth(&self, event: event::AggTradeEvent);
 
-    // // 收到成交数据时的回调，将原始数据解析后入队事件
-    // async fn on_trade(&self, raw_data: String);
+    // 收到成交数据时的回调，将原始数据解析后入队事件
+    async fn on_trade(&self, event: event::AggTradeEvent);
 
     // // 收到 K 线数据时的回调，将原始数据解析后入队事件
     // async fn on_kline(&self, raw_data: String);

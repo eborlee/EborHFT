@@ -2,6 +2,7 @@
 
 
 use event_engine::event::EventType;
+use event_engine::event::EventPayload;
 use event_engine::event_dispatcher::{AsyncQueueEventDispatcher, EventDispatcher};
 use market_agent::market_agent::MarketAgent;
 use market_agent::binance_market_agent::BinanceMarketAgent;
@@ -19,6 +20,16 @@ fn get_timestamp() -> u128 {
         .unwrap()
         .as_millis()
 }
+
+fn get_timestamp_us() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_micros() // ✅ 以微秒（µs）为单位
+}
+
+
+
 fn get_timestamp_ms() -> String {
     let now = Local::now();
     let datetime_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
@@ -32,9 +43,28 @@ async fn main() {
     let mut async_dispatcher = AsyncQueueEventDispatcher::new(200);
     
     // 注册一个回调到 Depth 事件：简单打印收到的深度数据
-    async_dispatcher.register(EventType::Depth, Box::new(|event| {
-        println!("[Callback] 收到 Depth 数据: {:?}", event.data);
+    async_dispatcher.register(EventType::AggTrade, Box::new(|event| {
+        // 记录当前时间戳（事件分发时间）
+        let processed_timestamp = get_timestamp();
+        let processed_timestamp_us = get_timestamp_us();
+    
+        // 提取 `received_timestamp` 和 `event_time`
+        let (received_timestamp, event_time_ms) = match &event.data {
+            EventPayload::AggTrade(trade) => (trade.received_timestamp, trade.event_time),
+        };
+    
+        // 计算 WebSocket → 事件分发的系统延迟
+        let system_latency = processed_timestamp_us.saturating_sub(received_timestamp);
+
+        // 计算 交易所 → WebSocket 数据传输的延迟
+        let exchange_latency = received_timestamp.saturating_sub(event_time_ms as u128 * 1_000);
+    
+        println!(
+            "【聚合成交】系统延迟: {} µs | 交易所延迟: {} µs | {:?}",
+            system_latency, exchange_latency, event.data
+        );
     }));
+    
 
     // 拆分出 Producer 和 Consumer
     let (producer, mut consumer) = async_dispatcher.split();

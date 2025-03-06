@@ -1,14 +1,35 @@
 use crate::market_agent::MarketAgent;
-
+use std::any::type_name;
 use async_trait::async_trait;
 use feeder::websocket::BinanceWebSocketClient;
 use feeder::websocket::WebSocket;
-
+use serde_json::Error as SerdeError;
+use event_engine::event;
+use event_engine::event::BinanceEvent;
 use event_engine::event::EventType;
+use event_engine::event::EventPayload;
 use event_engine::event_dispatcher::QueueEventDispatcherProducer;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::error::Error;
+
+use std::time::Duration;
+use chrono::Local;
+fn get_timestamp() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+}
+
+fn get_timestamp_us() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_micros() // ✅ 以微秒（µs）为单位
+}
+
+
 
 /// BinanceMarketAgent 实现 MarketAgent 接口，封装 BinanceWebSocketClient 与事件分发器
 #[derive(Clone)]
@@ -25,13 +46,27 @@ impl MarketAgent for BinanceMarketAgent {
         {
             let mut ws = self.ws.lock().await;
             ws.set_message_callback(move |msg: String| {
+                let received_timestamp = get_timestamp_us();
                 let agent = agent_clone.clone();
+                
                 tokio::spawn(async move {
-                    // 根据实际业务，可进一步解析 msg，此处简单判断是否包含 "depth"
-                    // if msg.contains("depth") {
-                    //     agent.on_depth(msg).await;
-                    // }
-                    agent.on_depth(msg).await;
+                    let event: Result<BinanceEvent, SerdeError> = serde_json::from_str(&msg);
+                    match event {
+                        Ok(event) => {
+                            match event {
+                                BinanceEvent::AggTrade(mut data) => {
+                                    data.received_timestamp = received_timestamp; 
+                                    agent.on_trade(data).await;
+                                }
+                                // BinanceEvent::DepthUpdate(data) => {
+                                //     agent.on_depth(data).await;
+                                // }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("❌ JSON 解析失败: {} - 原始消息: {}", e, msg);
+                        }
+                    }
                 });
             });
         }
@@ -40,12 +75,20 @@ impl MarketAgent for BinanceMarketAgent {
         Ok(())
     }
 
-    async fn on_depth(&self, raw_data: String) {
+
+    async fn on_depth(&self, event: event::AggTradeEvent) {
         // 此处可添加对 raw_data 的进一步解析、转换
-        println!("MarketAgent on_depth 收到数据: {}", raw_data);
+        // println!("MarketAgent on_depth 收到数据: {}", raw_data);
         let mut producer = self.event_producer.lock().await;
         // 将深度数据作为事件入队
-        producer.fire(EventType::Depth, vec![raw_data]);
+        producer.fire(EventType::Depth, EventPayload::AggTrade(event));
+    }
+
+    async fn on_trade(&self, event: event::AggTradeEvent) {
+        // binance 的 aggTrade 数据
+        let mut producer = self.event_producer.lock().await;
+        // 将深度数据作为事件入队
+        producer.fire(EventType::AggTrade, EventPayload::AggTrade(event));
     }
 }
 

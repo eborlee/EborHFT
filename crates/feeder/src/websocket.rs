@@ -148,8 +148,11 @@ impl WebSocket for BinanceWebSocketClient {
                     match message {
                         Message::Text(text) => {
                             // 如果是组合 streams，payload 格式为 {"stream": "...", "data": ...}
-                            println!("收到文本消息: {}", text);
+                            // println!("收到文本消息: {}", text);
                             // 此处可根据业务解析并分发到 on_depth / on_trade 等回调
+                            if let Some(ref callback) = self.on_message_callback {
+                                callback(text);
+                            }
                         }
                         Message::Ping(data) => {
                             println!("收到 ping, 回复 pong");
