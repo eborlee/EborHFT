@@ -25,11 +25,15 @@ pub trait WebSocket {
     async fn subscribe(&mut self, streams: Vec<&str>) -> Result<(), Box<dyn Error + Send>>;
 }
 
+// 修改 BinanceWebSocketClient，增加一个 on_message 回调属性
+type MessageCallback = Box<dyn Fn(String) + Send + Sync>;
+
 pub struct BinanceWebSocketClient {
     /// 内部保存连接后的 WebSocketStream
     ws_stream: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     /// 记录连接建立时间，用于判断24小时有效期
     connection_start: Option<Instant>,
+    on_message_callback: Option<MessageCallback>,
 }
 
 impl BinanceWebSocketClient {
@@ -37,6 +41,7 @@ impl BinanceWebSocketClient {
         Self {
             ws_stream: None,
             connection_start: None,
+            on_message_callback: None,
         }
     }
 
@@ -69,6 +74,14 @@ impl BinanceWebSocketClient {
             Err(Box::new(io::Error::new(io::ErrorKind::Other, "WebSocket 未连接")))
 
         }
+    }
+
+    /// 设置消息回调
+    pub fn set_message_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(String) + Send + Sync + 'static,
+    {
+        self.on_message_callback = Some(Box::new(callback));
     }
 }
 
@@ -157,7 +170,7 @@ impl WebSocket for BinanceWebSocketClient {
                             break;
                         }
                         _ => {
-                            println!("收到default消息: {:?}", message);
+                            // println!("收到default消息: {:?}", message);
                         }
                     }
                 }
