@@ -25,19 +25,19 @@ pub trait EventDispatcher {
 
 pub struct QueueEventDispatcher{
     event_map: HashMap<EventType, Vec<Box<dyn Fn(&EventData)+ Send + Sync >>>,
-    // producer: Producer<EventData>, // 生产者（写入数据）
-    // event_queue: Consumer<EventData>,    // 消费者（读取数据）
-    producer: Sender<EventData>,
-    event_queue: Receiver<EventData>,
+    producer: Producer<EventData>, // 生产者（写入数据）
+    event_queue: Consumer<EventData>,    // 消费者（读取数据）
+    // producer: Sender<EventData>,
+    // event_queue: Receiver<EventData>,
 }
 
 impl QueueEventDispatcher {
     pub fn new(capacity: usize) -> Self {
         let event_map = HashMap::new(); // 正确声明 event_map 变量
-        // let rb = RingBuffer::<EventData>::new(capacity);
+        let rb = RingBuffer::<EventData>::new(capacity);
 
-        // let (producer, consumer) = rb.split(); // 拆分成生产者和消费者
-        let (producer, consumer) = crossbeam_channel::bounded(capacity);
+        let (producer, consumer) = rb.split(); // 拆分成生产者和消费者
+        // let (producer, consumer) = crossbeam_channel::bounded(capacity);
         Self {
             producer,
             event_queue: consumer,
@@ -46,13 +46,13 @@ impl QueueEventDispatcher {
     }
 
     // 事件入队（不带参数）
-    fn enqueue(&self, data: EventData) {
+    fn enqueue(&mut self, data: EventData) {
         // if self.producer.is_full() {
         //     println!("Warning: Event queue is full. The oldest event will be overwritten.");
         //     self.event_queue.pop(); // 丢弃最早的事件
         // }
-        // let _ = self.producer.push(data);
-        self.producer.send(data).unwrap();
+        let _ = self.producer.push(data);
+        // self.producer.send(data).unwrap();
     }
 
     // 事件入队（带参数）
@@ -65,15 +65,15 @@ impl QueueEventDispatcher {
     // }
 
     pub fn process(&mut self) {
-        // while let Some(event) = self.event_queue.pop() {
-        //     self.m_trigger(event);
-        // }
-        while let Ok(event) = self.event_queue.recv() {
+        while let Some(event) = self.event_queue.pop() {
             self.m_trigger(event);
         }
+        // while let Ok(event) = self.event_queue.recv() {
+        //     self.m_trigger(event);
+        // }
     }
 
-    pub fn fire(&self, event_type: EventType, data: EventPayload) {
+    pub fn fire(&mut self, event_type: EventType, data: EventPayload) {
         let event = EventData { event_type, data };
         self.enqueue(event);
     }
@@ -148,20 +148,22 @@ impl AsyncQueueEventDispatcher {
 
 
 pub struct QueueEventDispatcherProducer {
-    producer: Sender<EventData>,
+    // producer: Sender<EventData>,
+    producer: Producer<EventData>,
 }
 
 pub struct QueueEventDispatcherConsumer {
-    event_queue: Receiver<EventData>,
+    // event_queue: Receiver<EventData>,
+    event_queue: Consumer<EventData>,
     event_map: HashMap<EventType, Vec<Box<dyn Fn(&EventData)+ Send + Sync >>>,
 }
 
 impl QueueEventDispatcherProducer {
 
 
-    fn enqueue(&self, data: EventData) {
-        // let _ = self.producer.push(data);
-        self.producer.send(data).unwrap();
+    fn enqueue(&mut self, data: EventData) {
+        let _ = self.producer.push(data);
+        // self.producer.send(data).unwrap();
     }
 
     // // 事件入队（带参数）
@@ -174,7 +176,7 @@ impl QueueEventDispatcherProducer {
     //     self.enqueue(data);
     // }
 
-    pub fn fire(&self, event_type: EventType, data: EventPayload) {
+    pub fn fire(&mut self, event_type: EventType, data: EventPayload) {
         let event = EventData { event_type, data };
         self.enqueue(event);
     }
@@ -192,11 +194,11 @@ impl QueueEventDispatcherConsumer {
     }
 
     pub fn process(&mut self) {
-        // while let Some(event) = self.event_queue.pop() {
-        //     self.m_trigger(event);
-        // }
-        while let Ok(event) = self.event_queue.recv() {
+        while let Some(event) = self.event_queue.pop() {
             self.m_trigger(event);
         }
+        // while let Ok(event) = self.event_queue.recv() {
+        //     self.m_trigger(event);
+        // }
     }
 }

@@ -72,3 +72,7 @@ path = "bins/test/test_bma.rs"
 [[bin]]
 name = "test_event_type"
 path = "bins/test/test_event_type.rs"
+
+[[bin]]
+name = "test_bma_sync"
+path = "bins/test/test_bma_sync.rs"

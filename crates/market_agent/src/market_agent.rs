@@ -11,9 +11,9 @@ use std::error::Error;
 
 /// MarketAgent 定义了市场代理所需实现的接口
 #[async_trait]
-pub trait MarketAgent: Send + Sync {
+pub trait MarketAgent:{
     /// 启动市场代理，通常需要注册回调并启动 ws 的监听循环
-    async fn start(self: Arc<Self>) -> Result<(), Box<dyn Error + Send>>;
+    async fn start(self: Arc<Self>) -> Result<(), Box<dyn Error>>;
 
     /// 收到深度数据时的回调，将原始数据解析后入队事件
     async fn on_depth(&self, event: event::AggTradeEvent);
