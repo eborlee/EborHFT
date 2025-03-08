@@ -13,7 +13,7 @@ use std::error::Error;
 #[async_trait]
 pub trait MarketAgent: Send + Sync {
     /// 启动市场代理，通常需要注册回调并启动 ws 的监听循环
-    async fn start(&self) -> Result<(), Box<dyn Error + Send>>;
+    async fn start(self: Arc<Self>) -> Result<(), Box<dyn Error + Send>>;
 
     /// 收到深度数据时的回调，将原始数据解析后入队事件
     async fn on_depth(&self, event: event::AggTradeEvent);

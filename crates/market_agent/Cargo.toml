@@ -17,3 +17,5 @@ url = { workspace = true }
 
 event_engine = { workspace = true }
 feeder = { workspace = true }
+
+crossbeam-channel = {workspace = true}

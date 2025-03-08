@@ -8,3 +8,4 @@ ringbuf = { workspace = true }  # 让 sublib 使用 workspace 共享的 ringbuf
 serde = { workspace = true }
 serde_json = {workspace = true}
 chrono = { workspace = true }
+crossbeam-channel = {workspace = true}
