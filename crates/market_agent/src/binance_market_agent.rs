@@ -139,7 +139,7 @@ impl BinanceMarketAgent {
         // 先拿到一个裸指针，注意是 *mut Self
         rt.block_on(async {
         let self_ptr = AgentPtr(self as *mut BinanceMarketAgent);
-        println!("111");
+        // println!("111");
         self.ws.set_message_callback(move|msg: String| {
             let received_timestamp = get_timestamp_us();
             let this = unsafe { &mut *self_ptr.0 };
@@ -156,10 +156,10 @@ impl BinanceMarketAgent {
             
         });
 
-        println!("222");
+        // println!("222");
         // 启动 WebSocket 监听
         self.ws.listen_loop().await?;
-        println!("333");
+        // println!("333");
         Ok::<(), Box<dyn std::error::Error>>(())
 
         })?;

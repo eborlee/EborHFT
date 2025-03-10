@@ -144,7 +144,7 @@ impl WebSocket for BinanceWebSocketClient {
                 break;
             }
             // 内层循环读取消息
-            println!("开始监听消息");
+            // println!("开始监听消息");
             match self.read_message().await {
                 Ok(message) => {
                     match message {
