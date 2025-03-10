@@ -44,8 +44,8 @@ pub struct BinanceMarketAgent {
     pub event_producer: QueueEventDispatcherProducer,
 }
 
-// #[async_trait]
-// impl MarketAgent for BinanceMarketAgent {
+#[async_trait]
+impl MarketAgent for BinanceMarketAgent {
 
     
 
@@ -133,7 +133,7 @@ impl BinanceMarketAgent {
     }
 
 
-    pub fn start_sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async pub fn start_sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // 1. 创建一个 tokio 运行时
         let rt = Runtime::new()?;
         // 先拿到一个裸指针，注意是 *mut Self

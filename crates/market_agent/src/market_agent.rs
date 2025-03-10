@@ -37,3 +37,17 @@ pub trait MarketAgent:{
     // async fn unsubscribe(&self, streams: Vec<&str>) -> Result<(), Box<dyn Error + Send>>;
 }
 
+#[async_trait(?Send)]
+pub trait MarketAgentSPSC: MarketAgent {
+    // 可以增加一些 SPSC 特有的方法
+    // 比如：启动同步版本的代理（这里仅做示例，实际设计中可根据需要调整）
+    async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+#[async_trait()]
+pub trait MarketAgentMPSC: MarketAgent {
+    async fn start(Arc<Self>) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+
+
