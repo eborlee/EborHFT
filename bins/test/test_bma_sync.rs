@@ -4,8 +4,8 @@
 use event_engine::event::EventType;
 use event_engine::event::EventPayload;
 use event_engine::event_dispatcher::{AsyncQueueEventDispatcher, EventDispatcher};
-use market_agent::market_agent::MarketAgent;
-use market_agent::binance_market_agent::BinanceMarketAgent;
+use market_agent::market_agent::MarketAgentSPSC;
+use market_agent::binance_market_agent::BinanceMarketAgentSPSC;
 use feeder::websocket::WebSocket;
 use feeder::websocket::BinanceWebSocketClient;
 use std::sync::{Arc, Mutex};
@@ -67,13 +67,23 @@ async fn main() {
 
     
 
-    let mut market_agent = BinanceMarketAgent::new(ws_client, producer);
+    let mut market_agent = BinanceMarketAgentSPSC::new(ws_client, producer);
 
-    thread::spawn(move || {
-        if let Err(e) = market_agent.start_sync() {
-            eprintln!("MarketAgent 错误：{}", e);
-        }
+    // thread::spawn(move || {
+    //     if let Err(e) = market_agent.start() {
+    //         eprintln!("MarketAgent 错误：{}", e);
+    //     }
+    // });
+
+    thread::spawn(move|| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            // 调用你的 async 函数
+            market_agent.start().await;
+        });
     });
+    
+    
 
     
 
