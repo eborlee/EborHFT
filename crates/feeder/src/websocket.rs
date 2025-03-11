@@ -27,14 +27,27 @@ pub trait WebSocket {
 }
 
 // 修改 BinanceWebSocketClient，增加一个 on_message 回调属性
-type MessageCallback = Box<dyn FnMut(String) + 'static>;
+pub enum UnifiedMessageCallback {
+    Spsc(Box<dyn FnMut(String) + 'static>),
+    Mpsc(Box<dyn Fn(String) + Send + Sync>),
+}
+
+impl UnifiedMessageCallback {
+    pub fn call(&mut self, msg: String) {
+        match self {
+            UnifiedMessageCallback::Spsc(cb) => cb(msg),
+            UnifiedMessageCallback::Mpsc(cb) => cb(msg),
+        }
+    }
+}
+
 
 pub struct BinanceWebSocketClient {
     /// 内部保存连接后的 WebSocketStream
     ws_stream: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     /// 记录连接建立时间，用于判断24小时有效期
     connection_start: Option<Instant>,
-    on_message_callback: Option<MessageCallback>,
+    on_message_callback: Option<UnifiedMessageCallback>,
 }
 
 impl BinanceWebSocketClient {
@@ -77,13 +90,25 @@ impl BinanceWebSocketClient {
         }
     }
 
+    
+    
+
     /// 设置消息回调
-    pub fn set_message_callback<F>(&mut self, callback: F)
+    pub fn set_message_callback_spsc<F>(&mut self, callback: F)
     where
         F: FnMut(String) + 'static,
     {
-        self.on_message_callback = Some(Box::new(callback));
+        self.on_message_callback = Some(UnifiedMessageCallback::Spsc(Box::new(callback)));
     }
+
+    pub fn set_message_callback_mpsc<F>(&mut self, callback: F)
+    where
+        F: Fn(String) + Send + Sync + 'static,
+    {
+        self.on_message_callback = Some(UnifiedMessageCallback::Mpsc(Box::new(callback)));
+    }
+
+    
 }
 
 #[async_trait(?Send)]
@@ -153,7 +178,7 @@ impl WebSocket for BinanceWebSocketClient {
                             // println!("收到文本消息: {}", text);
                             // 此处可根据业务解析并分发到 on_depth / on_trade 等回调
                             if let Some(ref mut callback) = self.on_message_callback {
-                                callback(text);
+                                callback.call(text);
                             }
                         }
                         Message::Ping(data) => {

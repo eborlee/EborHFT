@@ -4,7 +4,9 @@ use async_trait::async_trait;
 use feeder::websocket::BinanceWebSocketClient;
 use event_engine::event;
 use event_engine::event::EventType;
-use event_engine::event_dispatcher::QueueEventDispatcherProducer;
+// use event_engine::event_dispatcher::QueueEventDispatcherProducer;
+// use event_engine::event_dispatcher_spsc::QueueEventDispatcherProducerSPSC;
+// use event_engine::event_dispatcher_mpsc::QueueEventDispatcherProducerMPSC;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::error::Error;
@@ -37,9 +39,9 @@ pub trait MarketAgentSPSC {
 }
 
 #[async_trait()]
-pub trait MarketAgentMPSC {
+pub trait MarketAgentMPSC: Send + Sync {
     // 启动市场代理 多生产者单消费者下，需要声明为Send，因为需要在Tokio多线程中使用
-    async fn start(self: Arc<Self>) -> Result<(), Box<dyn Error + Send>>;
+    async fn start(self: Arc<Self>) -> Result<(), Box<dyn Error>>;
 
     // async fn on_depth(& self, event: event::AggTradeEvent);
 
