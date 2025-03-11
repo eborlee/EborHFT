@@ -1,7 +1,9 @@
 # Rust High-Frequency Trading Components
 
 **Overview**  
-This project includes high-frequency trading components developed in Rust for processing high-frequency orderflow data. It leverages an event-driven engine, Asynchronous WebSocket Based on Tokio, and SPSC ring buffer to acquire, write, and distribute market data in real time with microsecond-level system latency and millisecond-level internet latency. The component is designed to interface with multiple exchanges, such as Binance, by providing encapsulated API interfaces and data parsing. Additionally, it features an orderbook restructure and maintenance module to manage and update orderbook data efficiently.
+This project includes high-frequency trading components developed in Rust for processing high-frequency orderflow data. It leverages an event-driven engine, asynchronous WebSocket based on Tokio, and SPSC ring buffer for acquiring, writing, and distributing market data in real time with microsecond-level system latency and millisecond-level internet latency. It also integrates the interactions with multiple exchanges, such as Binance, by offering encapsulated API interfaces and data parsing capabilities.
+At the application layer, it provides an order book as an example, restructuring and maintenance module to efficiently manage and update order book data.
+Moreover, the project offers Python API interfaces, allowing seamless integration and usage within Python code.
 
 
 ---
