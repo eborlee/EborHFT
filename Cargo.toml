@@ -9,11 +9,13 @@ members = [
     "crates/event_engine",
     "crates/market_agent",
     "crates/feeder",
-    "crates/adapter"]
+    "crates/orderbook"]
 
 [dependencies]
+reqwest = { version = "0.11", features = ["json"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
+orderbook = { path = "crates/orderbook" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 feeder = { path = "crates/feeder" }
@@ -28,6 +30,7 @@ affinity = "0.1.2"
 
 
 [workspace.dependencies]
+reqwest = { version = "0.11", features = ["json"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
 feeder = { path = "crates/feeder" }
@@ -41,6 +44,8 @@ tokio = { version = "1.0", features = ["macros", "net", "time","rt-multi-thread"
 tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 url = "2.2"
 crossbeam-channel = "0.5"
+ordered-float = "2.10.0"
+
 
 
 
@@ -76,3 +81,7 @@ path = "bins/test/test_event_type.rs"
 [[bin]]
 name = "test_bma_sync"
 path = "bins/test/test_bma_sync.rs"
+
+[[bin]]
+name = "test_orderbook"
+path = "bins/test/test_orderbook.rs"
