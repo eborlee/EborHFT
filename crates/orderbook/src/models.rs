@@ -103,6 +103,16 @@ impl OrderBook {
             .map(|(p, &q)| (p.0, q))
             .collect()
     }
+
+    // 返回买单档位数量
+    pub fn bid_levels(&self) -> usize {
+        self.bids.orders.len()
+    }
+
+    // 返回卖单档位数量
+    pub fn ask_levels(&self) -> usize {
+        self.asks.orders.len()
+    }
     
 }
 
@@ -120,10 +130,10 @@ pub struct DepthSnapshot {
     pub match_time: Option<u64>, // 可选字段
 
     #[serde(rename = "bids")]
-    pub bids: Vec<[String; 2]>, // Vec<[price, quantity]>
+    pub bids: Vec<(String, String)>, // Vec<[price, quantity]>
 
     #[serde(rename = "asks")]
-    pub asks: Vec<[String; 2]>, // Vec<[price, quantity]>
+    pub asks: Vec<(String, String)>, // Vec<[price, quantity]>
 }
 
 /// 币安增量深度更新 (WebSocket 接收)
@@ -136,15 +146,15 @@ pub struct DepthUpdateEvent {
     #[serde(rename = "pu")]
     pub previous_update_id: u64,      // pu
     #[serde(rename = "b")]
-    pub bids: Vec<[String; 2]>,       // [price, quantity]
+    pub bids: Vec<(String, String)>,       // [price, quantity]
     #[serde(rename = "a")]
-    pub asks: Vec<[String; 2]>,       // [price, quantity]
+    pub asks: Vec<(String, String)>,       // [price, quantity]
 }
 
 /// 辅助函数：将 [String; 2] 转换为 (f64, f64)
-pub fn parse_order_entry(entry: &[String; 2]) -> (f64, f64) {
-    let price = entry[0].parse::<f64>().unwrap_or(0.0);
-    let qty = entry[1].parse::<f64>().unwrap_or(0.0);
+pub fn parse_order_entry(entry: &(String, String)) -> (f64, f64) {
+    let price = entry.0.parse::<f64>().unwrap_or(0.0);
+    let qty = entry.1.parse::<f64>().unwrap_or(0.0);
     (price, qty)
 }
 
@@ -154,13 +164,13 @@ impl DepthSnapshot {
     pub fn to_order_book(self) -> OrderBook {
         let mut order_book = OrderBook::new();
 
-        for bid in self.bids {
-            let (price, quantity) = parse_order_entry(&bid);
+        for bid in &self.bids {
+            let (price, quantity) = parse_order_entry(bid);
             order_book.update_side(OrderSide::Buy, price, quantity);
         }
 
-        for ask in self.asks {
-            let (price, quantity) = parse_order_entry(&ask);
+        for ask in &self.asks {
+            let (price, quantity) = parse_order_entry(ask);
             order_book.update_side(OrderSide::Sell, price, quantity);
         }
 

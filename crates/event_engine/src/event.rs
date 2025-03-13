@@ -10,9 +10,10 @@ pub enum EventType {
     Kline,
     Trade
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum EventPayload {
     AggTrade(AggTradeEvent),
+    Depth(DepthEvent),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,8 +22,8 @@ pub enum BinanceEvent {
     #[serde(rename = "aggTrade")]
     AggTrade(AggTradeEvent),
     // 如果将来有其他事件类型，可以在这里添加，例如：
-    // #[serde(rename = "depth")]
-    // Depth(DepthEvent),
+    #[serde(rename = "depthUpdate")]
+    Depth(DepthEvent),
     // #[serde(rename = "kline")]
     // Kline(KlineEvent),
 }
@@ -31,7 +32,7 @@ impl BinanceEvent {
     pub fn event_type(&self) -> EventType {
         match self {
             BinanceEvent::AggTrade(_) => EventType::AggTrade,
-            // BinanceEvent::Depth(_) => EventType::Depth,
+            BinanceEvent::Depth(_) => EventType::Depth,
             // BinanceEvent::Kline(_) => EventType::Kline,
         }
     }
@@ -62,6 +63,42 @@ pub struct AggTradeEvent {
     // 捕获额外的未知字段
     #[serde(flatten)]
     pub extra: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DepthEvent {
+    #[serde(alias = "e", alias = "event", default)]
+    pub event: String,               // 事件类型
+
+    #[serde(alias = "E", alias = "eventTime", default)]
+    pub event_time: u64,             // 事件时间
+
+    #[serde(alias = "T", alias = "tradeTime", default)]
+    pub trade_time: u64,             // 交易时间
+
+    #[serde(alias = "s", alias = "symbol", default)]
+    pub symbol: String,              // 交易对
+
+    #[serde(alias = "U", default)]
+    pub first_update_id: u64,        // 从上次推送至今新增的第一个 update Id
+
+    #[serde(alias = "u", default)]
+    pub last_update_id: u64,         // 从上次推送至今新增的最后一个 update Id
+
+    #[serde(alias = "pu", default)]
+    pub previous_update_id: u64,     // 上次推送的最后一个 update Id（上条消息的 u 字段）
+
+    #[serde(alias = "b", default)]
+    pub bids: Vec<(String, String)>, // 买方档位，每个元素为 (价格, 数量)
+
+    #[serde(alias = "a", default)]
+    pub asks: Vec<(String, String)>, // 卖方档位，每个元素为 (价格, 数量)
+
+    #[serde(skip)]
+    pub received_timestamp: u128,    // 记录 WebSocket 接收到的时间戳
+
+    #[serde(flatten)]
+    pub extra: HashMap<String, Value>, // 捕获额外的未知字段
 }
 
 // #[derive(Debug, Clone, Serialize, Deserialize)]

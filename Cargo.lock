@@ -904,6 +904,7 @@ dependencies = [
 name = "orderbook"
 version = "0.1.0"
 dependencies = [
+ "event_engine",
  "ordered-float",
  "reqwest",
  "serde",

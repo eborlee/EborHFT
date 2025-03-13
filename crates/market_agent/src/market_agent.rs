@@ -15,7 +15,7 @@ pub trait MarketAgent {
     // 启动市场代理 单生产者单消费者下，不需要声明为Send
     async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>>;
 
-    // fn on_depth(&mut self, event: event::AggTradeEvent);
+    fn on_depth(&mut self, event: event::DepthEvent);
 
     fn on_trade(&mut self, event: event::AggTradeEvent);
 

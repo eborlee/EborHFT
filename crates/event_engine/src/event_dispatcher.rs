@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::event::EventType;
 use crate::event::EventPayload;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EventData {
     pub event_type: EventType,
     pub data: EventPayload,
@@ -195,6 +195,7 @@ impl QueueEventDispatcherConsumer {
 
     pub fn process(&mut self) {
         while let Some(event) = self.event_queue.pop() {
+            // println!("consumer处理事件：{:?}", event);
             self.m_trigger(event);
         }
         // while let Ok(event) = self.event_queue.recv() {

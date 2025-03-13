@@ -85,3 +85,8 @@ path = "bins/test/test_bma_sync.rs"
 [[bin]]
 name = "test_orderbook"
 path = "bins/test/test_orderbook.rs"
+
+
+[[bin]]
+name = "test_ob_and_ee"
+path = "bins/test/test_ob_and_ee.rs"

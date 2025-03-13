@@ -58,14 +58,21 @@ impl MarketAgent for BinanceMarketAgent {
             // 安全地通过裸指针获取可变引用
             let this = unsafe { &mut *self_ptr };
             match serde_json::from_slice(msg.as_bytes()) {
-                Ok(event_engine::event::BinanceEvent::AggTrade(mut data)) => {
+                Ok(BinanceEvent::AggTrade(mut data)) => {
                     data.received_timestamp = received_timestamp;
                     this.on_trade(data);
+                }
+                Ok(BinanceEvent::Depth(mut data)) => {
+                    // println!("收到深度数据: {:?}", data);
+                    data.received_timestamp = received_timestamp;
+                    this.on_depth(data);
                 }
                 Err(e) => {
                     eprintln!("JSON解析失败: {} - 原始消息: {}", e, msg);
                 }
-                _ => {}
+                _ => {
+                    eprintln!("收到未处理的事件类型: {}", msg);
+                }
             }
         });
 
@@ -77,6 +84,10 @@ impl MarketAgent for BinanceMarketAgent {
 
     fn on_trade(&mut self, event: event::AggTradeEvent) {
         self.event_producer.fire(EventType::AggTrade, EventPayload::AggTrade(event));
+    }
+    
+    fn on_depth(&mut self, event: event::DepthEvent) {
+        self.event_producer.fire(EventType::Depth, EventPayload::Depth(event));
     }
 }
 
