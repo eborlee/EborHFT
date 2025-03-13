@@ -5,6 +5,11 @@ This project includes high-frequency trading components developed in Rust for pr
 At the application layer, it provides an order book as an example, restructuring and maintenance module to efficiently manage and update order book data.
 Moreover, the project offers Python API interfaces, allowing seamless integration and usage within Python code.
 
+<p align="center">
+  <img src="./structure.png" alt="structure" width="700"/>
+</p>
+
+
 
 ---
 
