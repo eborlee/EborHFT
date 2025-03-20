@@ -178,6 +178,7 @@ impl QueueEventDispatcherProducer {
 
     pub fn fire(&mut self, event_type: EventType, data: EventPayload) {
         let event = EventData { event_type, data };
+        // println!("producer发送事件：{:?}", event);
         self.enqueue(event);
     }
 }
@@ -187,6 +188,7 @@ impl QueueEventDispatcherConsumer {
 
     fn m_trigger(&self, event: EventData) {
         if let Some(call_backs) = self.event_map.get(&event.event_type) {
+            // println!("consumer处理事件：{:?}", event);
             for call_back in call_backs {
                 call_back(&event);
             }
@@ -201,5 +203,18 @@ impl QueueEventDispatcherConsumer {
         // while let Ok(event) = self.event_queue.recv() {
         //     self.m_trigger(event);
         // }
+    }
+
+    pub fn register(&mut self, event_type: EventType, call_back: Box<dyn Fn(&EventData)+ Send + Sync>) {
+        let call_backs = self.event_map.entry(event_type).or_insert(Vec::new());
+        call_backs.push(call_back);
+    }
+
+    pub fn unregister(&mut self, event_type: EventType) {
+        self.event_map.remove(&event_type);
+    }
+
+    pub fn clear_events(&mut self) {
+        self.event_map.clear();
     }
 }

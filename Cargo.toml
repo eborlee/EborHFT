@@ -9,13 +9,15 @@ members = [
     "crates/event_engine",
     "crates/market_agent",
     "crates/feeder",
-    "crates/orderbook"]
+    "crates/orderbook", "crates/app"]
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
 orderbook = { path = "crates/orderbook" }
+app = { path = "crates/app" }
+common = { path = "crates/common" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 feeder = { path = "crates/feeder" }
@@ -34,13 +36,15 @@ reqwest = { version = "0.11", features = ["json"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
 feeder = { path = "crates/feeder" }
+app = { path = "crates/app" }
+common = { path = "crates/common" }
 ringbuf = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = "0.4"
 async-trait = "0.1"
 futures-util = "0.3"
-tokio = { version = "1.0", features = ["macros", "net", "time","rt-multi-thread", "sync"] }
+tokio = { version = "1.0", features = ["macros", "net", "time","rt-multi-thread", "sync","signal"] }
 tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 url = "2.2"
 crossbeam-channel = "0.5"
@@ -90,3 +94,7 @@ path = "bins/test/test_orderbook.rs"
 [[bin]]
 name = "test_ob_and_ee"
 path = "bins/test/test_ob_and_ee.rs"
+
+[[bin]]
+name = "test_runtime"
+path = "bins/test/test_runtime.rs"

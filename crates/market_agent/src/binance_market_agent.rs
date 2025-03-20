@@ -89,6 +89,11 @@ impl MarketAgent for BinanceMarketAgent {
     fn on_depth(&mut self, event: event::DepthEvent) {
         self.event_producer.fire(EventType::Depth, EventPayload::Depth(event));
     }
+
+    async fn subscribe(&mut self, streams: Vec<&str>) -> Result<(), Box<dyn Error>> {
+        self.ws.subscribe(streams).await?;
+        Ok(())
+    }
 }
 
 struct AgentPtr(*mut BinanceMarketAgent);

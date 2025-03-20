@@ -19,7 +19,6 @@ pub struct OrderBookEngine {
     pub symbol: String,
     // 新增 flag，标识是否已经应用了第一个连续的深度更新事件
     pub continuous_started: bool,
-
 }
 
 impl OrderBookEngine {

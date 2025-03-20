@@ -28,8 +28,8 @@ pub trait MarketAgent {
     // // 收到归集交易数据时的回调，将原始数据解析后入队事件
     // async fn on_agg_trade(&self, raw_data: String);
 
-    // // 订阅指定的流
-    // async fn subscribe(&self, streams: Vec<&str>) -> Result<(), Box<dyn Error + Send>>;
+    // 订阅指定的流
+    async fn subscribe(&mut self, streams: Vec<&str>) -> Result<(), Box<dyn Error>>;
 
     // // 取消订阅指定的流
     // async fn unsubscribe(&self, streams: Vec<&str>) -> Result<(), Box<dyn Error + Send>>;
