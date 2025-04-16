@@ -9,3 +9,4 @@ tokio = { workspace = true }
 feeder = { workspace = true }
 event_engine = { workspace = true }
 market_agent = { workspace = true }
+core_affinity = { workspace = true }

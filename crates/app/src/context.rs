@@ -14,7 +14,7 @@ use feeder::websocket::WebSocket;
 use feeder::websocket::BinanceWebSocketClient;
 use tokio::runtime::Runtime;
 use std::thread;
-
+use core_affinity;
 use crate::components::create_exchange_components;
 use common::exchange::Exchange;
 
@@ -66,9 +66,16 @@ impl Context {
     /// 在独立线程中启动事件消费循环
     pub fn start_event_loop(&mut self) {
         let mut consumer = self.consumer.take().expect("consumer is already taken");
-        thread::spawn(move || loop {
-            consumer.process();
-            // 根据需要可以添加 sleep 或 yield 以降低 CPU 占用
+        thread::spawn(move || {
+            // 获取所有可用的 CPU 核心，选择目标核
+            let cores = core_affinity::get_core_ids().expect("无法获取 CPU 核心列表");
+            let core = cores.get(0).cloned().expect("No available core found");
+            core_affinity::set_for_current(core);
+    
+            loop {
+                consumer.process();
+                // 根据需要可以添加 sleep 或 yield 以降低 CPU 占用
+            }
         });
     }
 

@@ -29,6 +29,8 @@ tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 log = "0.4"
 crossbeam-channel = "0.5"
 affinity = "0.1.2"
+core_affinity = "0.5"
+libc = "0.2"
 
 
 [workspace.dependencies]
@@ -49,6 +51,7 @@ tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
 url = "2.2"
 crossbeam-channel = "0.5"
 ordered-float = "2.10.0"
+core_affinity = "0.5"
 
 
 

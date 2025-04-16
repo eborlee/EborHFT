@@ -32,6 +32,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("数量: {}", data.quantity);
             println!("是否买方主动: {}", data.is_buyer_maker);
             println!("原始 JSON 解析后的数据结构: {:#?}", data);
+        },
+        _ => {
+            println!("❌ 解析到未知事件类型");
         }
     }
 
@@ -39,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("事件类型映射为: {:?}", event.event_type());
 
     println!("事件数据：{:?}", event);
-    println!("事件数据：{:?}", event.AggTrade);
+    // println!("事件数据：{:?}", event.AggTrade);
 
     Ok(())
 }

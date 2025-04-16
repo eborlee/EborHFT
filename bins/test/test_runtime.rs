@@ -1,18 +1,26 @@
 // main.rs
 use std::error::Error;
 use std::sync::{Arc, Mutex};
-
+use event_engine::event::EventPayload;
 use orderbook::engine::OrderBookEngine;
 use app::runtime::Runtime;
 use event_engine::event::{EventType};
 use event_engine::event_dispatcher::EventData;
 use common::exchange::Exchange;
 
+fn get_timestamp_us() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_micros() // ✅ 以微秒（µs）为单位
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // 创建 Runtime（核心系统）
     let mut app = Runtime::new(Exchange::Binance, 200).await?;
-    app.subscribe(vec!["btcusdt@depth@100ms"]).await?;
+    // app.subscribe(vec!["btcusdt@depth@100ms"]).await?;
+    app.subscribe(vec!["btcusdt@aggTrade"]).await?;
 
     // 创建订单簿模块（作为独立应用层模块），这里用 Arc<Mutex<>> 包装以便跨线程共享
     let orderbook_engine = Arc::new(Mutex::new(OrderBookEngine::new("BTCUSDT")));
@@ -41,10 +49,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
     {
         let orderbook_clone = Arc::clone(&orderbook_engine);
         app.register_event_callback(EventType::Depth, Box::new(move |event: &EventData| {
-            let mut engine = orderbook_clone.lock().unwrap();
-            if let Err(e) = engine.push_update(event.clone()) {
-                eprintln!("订单簿更新失败: {}", e);
-            }
+            // 计算延时
+            let processed_timestamp = get_timestamp_us();
+            let (received_timestamp, event_time_ms) = match &event.data {
+                EventPayload::Depth(trade) => (trade.received_timestamp, trade.event_time),
+                EventPayload::AggTrade(trade) => (trade.received_timestamp, trade.event_time),
+                _ => (0, 0),
+            };
+            let system_latency = processed_timestamp.saturating_sub(received_timestamp);
+            let exchange_latency = received_timestamp.saturating_sub(event_time_ms as u128 * 1_000);
+        
+            println!(
+                "【深度】系统延迟: {} µs | 网络延迟: {} µs",
+                system_latency, exchange_latency
+            );
+            // let mut engine = orderbook_clone.lock().unwrap();
+            // if let Err(e) = engine.push_update(event.clone()) {
+            //     eprintln!("订单簿更新失败: {}", e);
+            // }
         }));
     }
 
