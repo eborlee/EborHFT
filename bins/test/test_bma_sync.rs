@@ -13,6 +13,9 @@ use std::thread;
 use std::time::Duration;
 use chrono::Local;
 use tokio::runtime::Builder;
+use core_affinity;
+
+
 // 以下函数用于获取时间戳
 fn get_timestamp() -> u128 {
     std::time::SystemTime::now()
@@ -43,12 +46,13 @@ fn get_timestamp_ms() -> String {
 
 #[tokio::main]
 async fn main() {
-    let mut async_dispatcher = AsyncQueueEventDispatcher::new(200);
+    let mut async_dispatcher = AsyncQueueEventDispatcher::new(500);
     
     async_dispatcher.register(EventType::AggTrade, Box::new(|event| {
         let processed_timestamp = get_timestamp_us();
         let (received_timestamp, event_time_ms) = match &event.data {
             EventPayload::AggTrade(trade) => (trade.received_timestamp, trade.event_time),
+            _ => return, // 其他情况不处理，直接 return（或 continue、panic，根据上下文）
         };
         let system_latency = processed_timestamp.saturating_sub(received_timestamp);
         let exchange_latency = received_timestamp.saturating_sub(event_time_ms as u128 * 1_000);
@@ -62,8 +66,8 @@ async fn main() {
     let (producer, mut consumer) = async_dispatcher.split();
 
     let mut ws_client = BinanceWebSocketClient::new();
-    ws_client.connect(vec!["bnbusdt@aggTrade"]).await.unwrap();
-    ws_client.subscribe(vec!["bnbusdt@aggTrade"]).await.unwrap();
+    ws_client.connect(vec!["btcusdt@aggTrade"]).await.unwrap();
+    ws_client.subscribe(vec!["btcusdt@aggTrade"]).await.unwrap();
 
     
 
@@ -75,7 +79,14 @@ async fn main() {
     //     }
     // });
 
+    // 🧠 获取 CPU 核心 ID
+    let cores = core_affinity::get_core_ids().expect("无法获取 CPU 核心列表");
+    let core0 = cores.get(0).cloned().expect("No core 0");
+    let core1 = cores.get(1).cloned().expect("No core 1");
+
     thread::spawn(move|| {
+        core_affinity::set_for_current(core0); // 👈 绑定到 core0
+
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             // 调用你的 async 函数
@@ -84,9 +95,10 @@ async fn main() {
     });
 
     
-
-    loop {
-        consumer.process();
-        // tokio::time::sleep(Duration::from_millis(1)).await;
-    }
+    core_affinity::set_for_current(core1);
+    // loop {
+    //     consumer.process();
+    //     // tokio::time::sleep(Duration::from_millis(1)).await;
+    // }
+    consumer.process();
 }
