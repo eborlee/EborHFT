@@ -1,2 +1,7 @@
 /target
 /FlameGraph
+
+# 忽略log
+*.log
+
+subscribers.json

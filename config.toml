@@ -1,0 +1,13 @@
+
+
+history_max_len = 1000
+backup_path = "backup.json"
+push_interval = "1h"
+
+[telegram]
+token = "7536515947:AAGx3tQAsNsAm2BAUZcvpSnOIKt9knjz_UA"
+
+[watched_quantities]
+btcusdt = ["10.000","5.002","6.000"
+,"5.004","5.005","7.000","8.000","5.007","5.006","10.002"
+]

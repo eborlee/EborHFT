@@ -12,7 +12,7 @@ members = [
     "crates/orderbook", "crates/app"]
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
 orderbook = { path = "crates/orderbook" }
@@ -30,6 +30,13 @@ log = "0.4"
 crossbeam-channel = "0.5"
 affinity = "0.1.2"
 core_affinity = "0.5"
+
+toml = "0.8"
+once_cell = "1.19"
+teloxide = { version = "0.12", features = ["macros", "auto-send", "rustls"] }
+
+
+
 
 
 
@@ -100,3 +107,7 @@ path = "bins/test/test_ob_and_ee.rs"
 [[bin]]
 name = "test_runtime"
 path = "bins/test/test_runtime.rs"
+
+[[bin]]
+name = "trade_monitor"
+path = "bins/trade_monitor/trade_monitor.rs"
