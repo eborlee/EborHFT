@@ -5,3 +5,5 @@
 *.log
 
 subscribers.json
+
+config.toml
