@@ -11,6 +11,8 @@ use std::io;
 use std::cell::RefCell;
 use std::rc::Rc;
 use url::Url;
+use std::collections::HashSet;
+
 
 #[async_trait(?Send)]
 pub trait WebSocket {
@@ -34,7 +36,12 @@ pub struct BinanceWebSocketClient {
     ws_stream: Option<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     /// 记录连接建立时间，用于判断24小时有效期
     connection_start: Option<Instant>,
+
+    // /// 消息回调函数
     on_message_callback: Option<MessageCallback>,
+
+    // /// 记录上次订阅的流列表
+    last_subscribed_streams: HashSet<String>,
 }
 
 impl BinanceWebSocketClient {
@@ -43,6 +50,7 @@ impl BinanceWebSocketClient {
             ws_stream: None,
             connection_start: None,
             on_message_callback: None,
+            last_subscribed_streams: HashSet::new(),
         }
     }
 
@@ -131,17 +139,55 @@ impl WebSocket for BinanceWebSocketClient {
 
     async fn listen_loop(&mut self) -> Result<(), Box<dyn Error >> {
         // 外层循环用于断线重连与定时重连（24小时断线重连）
+        let mut count = 0;
+        // let mut first_text_received = false;
+
         loop {
-            // 判断连接是否超过24小时，有效期小于24小时
-            if let Some(start) = self.connection_start {
-                if start.elapsed() > Duration::from_secs(24 * 3600) {
-                    println!("连接已超过24小时，准备重连...");
-                    self.ws_stream = None;
-                }
+            // ✅ 手动测试用：运行后立即断开一次连接以触发重连逻辑
+            if self.ws_stream.is_some() && count == 0 {
+                count += 1;
+                println!("[测试] 触发手动关闭连接");
+                self.ws_stream
+                    .as_mut()
+                    .unwrap()
+                    .send(Message::Close(None))
+                    .await?;
+                // 确保 break 掉当前循环迭代（模拟服务端断连）
+                continue;
             }
-            // 如无连接则退出内层监听循环，进入重连流程
-            if self.ws_stream.is_none() {
-                break;
+
+            let needs_reconnect = self.ws_stream.is_none()
+                || self.connection_start.map(|t| t.elapsed() > Duration::from_secs(24 * 3600)).unwrap_or(true);
+
+            if needs_reconnect {
+                println!("连接不存在或已过期，准备重连...");
+
+                let streams: Vec<String> = self
+                    .last_subscribed_streams
+                    .iter()
+                    .cloned()
+                    .collect(); // 完全拷贝出 Vec<String>
+
+                if streams.is_empty() {
+                    return Err("无任何已记录的订阅流，无法重连".into());
+                }
+
+                // 使用默认激活流启动连接
+                if let Err(e) = self.connect(vec!["btcusdt@aggTrade"]).await {
+                    eprintln!("重连失败: {}", e);
+                    sleep(Duration::from_secs(3)).await;
+                    continue;
+                }
+                
+                let streams_ref: Vec<&str> = streams.iter().map(|s| s.as_str()).collect();
+                // 直接再次订阅，不清除已记录流
+                if let Err(e) = self.subscribe(streams_ref).await {
+                    eprintln!("重订阅失败: {}", e);
+                    sleep(Duration::from_secs(3)).await;
+                    continue;
+                }
+
+                println!("重连并重新订阅成功");
             }
             // 内层循环读取消息
             // println!("开始监听消息");
@@ -152,6 +198,11 @@ impl WebSocket for BinanceWebSocketClient {
                             // 如果是组合 streams，payload 格式为 {"stream": "...", "data": ...}
                             // println!("收到文本消息: {}", text);
                             // 此处可根据业务解析并分发到 on_depth / on_trade 等回调
+                            // ✅ 首次输出文本消息
+                            // if !first_text_received {
+                            //     println!("[Websocket] 首次收到文本消息: {}", text);
+                            //     first_text_received = true;
+                            // }
                             if let Some(ref mut callback) = self.on_message_callback {
                                 callback(text);
                             }
@@ -173,30 +224,49 @@ impl WebSocket for BinanceWebSocketClient {
                         Message::Close(frame) => {
                             println!("收到关闭消息: {:?}", frame);
                             self.ws_stream = None;
-                            break;
+                            sleep(Duration::from_secs(3)).await;
+                            continue;
                         }
                         _ => {
                             // println!("收到default消息: {:?}", message);
                         }
                     }
-                }
-                Err(e) => {
+                        
+                },
+            Err(e) => {
                     eprintln!("读取消息错误: {}，准备重连", e);
                     self.ws_stream = None;
-                    break;
-                }
+                    sleep(Duration::from_secs(3)).await;
+                    continue;
+                } 
             }
         }
         // 断线重连前等待3秒，防止频繁重连
-        sleep(Duration::from_secs(3)).await;
-        Ok(())
+        // sleep(Duration::from_secs(3)).await;
+        // Ok(())
     }
 
     async fn subscribe(&mut self, streams: Vec<&str>) -> Result<(), Box<dyn Error >> {
         // 检查订阅流数量
-        if streams.len() > 200 {
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "单个连接最多订阅 200 个 Streams")))
+        // if streams.len() > 200 {
+        //     return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "单个连接最多订阅 200 个 Streams")))
+        // }
+
+        // 检查已订阅数量是否已超过200
+        if self.last_subscribed_streams.len() + streams.len() > 200 {
+            return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, "已订阅流数量超过200个")))
         }
+
+        // let new_streams: Vec<&str> = streams
+        //     .iter()
+        //     .filter(|s| !self.last_subscribed_streams.contains(&s.to_string()))
+        //     .cloned()
+        //     .collect();
+
+        // if new_streams.is_empty() {
+        //     println!("所有流都已订阅，跳过发送");
+        //     return Ok(());
+        // }
         // Binance 订阅消息格式示例：
         // { "method": "SUBSCRIBE", "params": ["stream1", "stream2"], "id": 1 }
         // let streams_lower: Vec<String> = streams.iter().map(|s| s.collect();
@@ -209,7 +279,18 @@ impl WebSocket for BinanceWebSocketClient {
         // 简单速率控制：每条消息间隔至少100ms，确保不超过每秒10条
         sleep(Duration::from_millis(100)).await;
         self.send(&msg_text).await?;
-        println!("发送订阅消息: {}", msg_text);
+
+
+        // 添加到已订阅集合
+        for s in streams {
+            self.last_subscribed_streams.insert(s.to_string());
+        }
+
+
+        println!("已发送订阅消息: {}", msg_text);
         Ok(())
     }
+
+
+
 }

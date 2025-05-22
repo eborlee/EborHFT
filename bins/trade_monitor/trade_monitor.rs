@@ -30,6 +30,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tokio::runtime::Runtime;
+use chrono::{DateTime, Duration};
 
 
 
@@ -117,7 +118,10 @@ async fn run_system() {
     start_timer_loop(cloned_history.clone(), move || {
         let trade_history = cloned_history.clone();
         let watched_map = watched.read().unwrap().clone(); // ✅ 提前 clone HashMap，释放锁
+
+        
         async move {
+            let bar_interval = Duration::minutes(15);
             let snapshot = get_all(&trade_history);
             let ids = SUBSCRIBERS.read().unwrap().clone();
 
@@ -127,18 +131,26 @@ async fn run_system() {
                 chrono::Duration::minutes(15),
                 chrono::Duration::days(3),
             );
+            let aligned_now = Utc
+                        .timestamp_opt(
+                            (Utc::now().timestamp() / bar_interval.num_seconds()) * bar_interval.num_seconds(),
+                            0,
+                        )
+                        .single()
+                        .unwrap_or_else(Utc::now);
 
             for (symbol, series) in imbalance {
-                let (v15, h1, h4, d1, d3) = summarize_imbalance_series(&series, Utc::now());
+                let (v15, h1, h4, d1, d3) = summarize_imbalance_series(&series, aligned_now,chrono::Duration::minutes(15));
 
                 let msg = format!(
                     "📊 *{}* 资金偏移统计：\n\
+                    UTC 时间：{}\n\
                     - 最新15min：{:+.3}\n\
                     - 1小时累计：{:+.3}\n\
                     - 4小时累计：{:+.3}\n\
                     - 1日累计：{:+.3}\n\
                     - 3日累计：{:+.3}",
-                    symbol.to_uppercase(), v15, h1, h4, d1, d3
+                    symbol.to_uppercase(),aligned_now, v15, h1, h4, d1, d3
                 );
 
                 for id in &ids {

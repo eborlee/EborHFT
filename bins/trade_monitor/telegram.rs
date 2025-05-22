@@ -10,6 +10,7 @@ use crate::trade_store::get_all;
 use crate::types::{TradeHistory, WatchedQtySet};
 use crate::indicators::{compute_symbol_imbalance_series,summarize_imbalance_series};
 use teloxide::types::{BotCommand};
+use chrono::{DateTime, Duration, TimeZone};
 
 // bins/trade_monitor/telegram.rs 顶部添加：
 use teloxide::prelude::*; // 确保引入所有必要类型（尤其是 `Message`）
@@ -98,6 +99,7 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
         async move {
             let text = message.text().unwrap_or("").trim();
             let sender_id = message.chat.id.to_string();
+            let bar_interval = Duration::minutes(15);
 
             match text {
                 "/start" => {
@@ -188,43 +190,50 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
 
 
                 cmd if cmd.starts_with("/imbalance ") => {
-                let symbol = cmd["/imbalance ".len()..].trim().to_lowercase();
+                    let symbol = cmd["/imbalance ".len()..].trim().to_lowercase();
 
-                // 获取数据快照与 qty 集
-                let snapshot = {
-                    let lock = trade_history.lock().unwrap();
-                    lock.clone()
-                };
-                let watched = watched_qty.read().unwrap().clone();
+                    // 获取数据快照与 qty 集
+                    let snapshot = {
+                        let lock = trade_history.lock().unwrap();
+                        lock.clone()
+                    };
+                    let watched = watched_qty.read().unwrap().clone();
+                    let aligned_now = Utc
+                        .timestamp_opt(
+                            (Utc::now().timestamp() / bar_interval.num_seconds()) * bar_interval.num_seconds(),
+                            0,
+                        )
+                        .single()
+                        .unwrap_or_else(Utc::now);
+                    if let Some(series) = compute_symbol_imbalance_series(
+                        &snapshot,
+                        &watched,
+                        chrono::Duration::minutes(15),
+                        chrono::Duration::days(3),
+                    ).get(&symbol) {
+                        let (v15, h1, h4, d1, d3) = summarize_imbalance_series(series, aligned_now, chrono::Duration::minutes(15));
 
-                if let Some(series) = compute_symbol_imbalance_series(
-                    &snapshot,
-                    &watched,
-                    chrono::Duration::minutes(15),
-                    chrono::Duration::days(3),
-                ).get(&symbol) {
-                    let (v15, h1, h4, d1, d3) = summarize_imbalance_series(series, Utc::now());
+                        let symbol_fmt = symbol.to_uppercase().replace('_', "\\_"); // MarkdownV2 转义
+                        let msg = format!(
+                            "📊 *{}* 资金偏移统计：\n\
+                            UTC 时间：{}\n\
+                            - 最新15min：{:+.3}\n\
+                            - 1小时累计：{:+.3}\n\
+                            - 4小时累计：{:+.3}\n\
+                            - 1日累计：{:+.3}\n\
+                            - 3日累计：{:+.3}",
+                            symbol_fmt, aligned_now,v15, h1, h4, d1, d3
+                        );
 
-                    let symbol_fmt = symbol.to_uppercase().replace('_', "\\_"); // MarkdownV2 转义
-                    let msg = format!(
-                        "📊 *{}* 资金偏移统计：\n\
-                        - 最新15min：{:+.3}\n\
-                        - 1小时累计：{:+.3}\n\
-                        - 4小时累计：{:+.3}\n\
-                        - 1日累计：{:+.3}\n\
-                        - 3日累计：{:+.3}",
-                        symbol_fmt, v15, h1, h4, d1, d3
-                    );
-
-                    bot.send_message(sender_id, msg)
-                        // .parse_mode(ParseMode::MarkdownV2)
-                        .send()
-                        .await?;
-                } else {
-                    bot.send_message(sender_id, format!("⚠️ 无法找到 {} 的监控数据", symbol))
-                        .send()
-                        .await?;
-                }
+                        bot.send_message(sender_id, msg)
+                            // .parse_mode(ParseMode::MarkdownV2)
+                            .send()
+                            .await?;
+                    } else {
+                        bot.send_message(sender_id, format!("⚠️ 无法找到 {} 的监控数据", symbol))
+                            .send()
+                            .await?;
+                    }
             }
 
             cmd if cmd.trim() == "/imbalance" => {
@@ -234,7 +243,13 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
                     lock.clone()
                 };
                 let watched = watched_qty.read().unwrap().clone();
-
+                let aligned_now = Utc
+                        .timestamp_opt(
+                            (Utc::now().timestamp() / bar_interval.num_seconds()) * bar_interval.num_seconds(),
+                            0,
+                        )
+                        .single()
+                        .unwrap_or_else(Utc::now);
                 let imbalance = compute_symbol_imbalance_series(
                     &snapshot,
                     &watched,
@@ -246,9 +261,9 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
                     bot.send_message(sender_id, "⚠️ 当前无任何监控数据").send().await?;
                 } else {
                     let mut lines = vec!["📊 所有监控品种资金偏移统计：".to_string()];
-
+                    lines.push(format!("\nUTC 时间：{}", aligned_now));
                     for (symbol, series) in imbalance {
-                        let (v15, h1, h4, d1, d3) = summarize_imbalance_series(&series, Utc::now());
+                        let (v15, h1, h4, d1, d3) = summarize_imbalance_series(&series, aligned_now,chrono::Duration::minutes(15));
 
                         let line = format!(
                             "*{}*\n- 15min: {:+.3} | 1h: {:+.3} | 4h: {:+.3} | 1d: {:+.3} | 3d: {:+.3}",

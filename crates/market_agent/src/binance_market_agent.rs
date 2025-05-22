@@ -19,8 +19,14 @@ use tokio::runtime::Runtime;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+// use std::sync::atomic::{AtomicBool, Ordering};
+// use std::sync::OnceLock;
+
 use std::time::Duration;
 use chrono::Local;
+
+
+
 fn get_timestamp() -> u128 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -52,6 +58,10 @@ impl MarketAgent for BinanceMarketAgent {
         // 获取一个裸指针，用于在回调中操作 self
         let self_ptr = self as *mut BinanceMarketAgent;
         
+
+        
+        // 初始化 AtomicBool（只初始化一次）
+        // FIRST_REAL_EVENT_PRINTED.get_or_init(|| AtomicBool::new(false));
         // 注册 WebSocket 消息回调
         self.ws.set_message_callback(move |msg: String| {
             let received_timestamp = get_timestamp_us();
@@ -60,6 +70,7 @@ impl MarketAgent for BinanceMarketAgent {
             match serde_json::from_slice(msg.as_bytes()) {
                 Ok(BinanceEvent::AggTrade(mut data)) => {
                     data.received_timestamp = received_timestamp;
+                    // println!("收到交易数据: {:?}", data);
                     this.on_trade(data);
                 }
                 Ok(BinanceEvent::Depth(mut data)) => {

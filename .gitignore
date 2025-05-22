@@ -2,7 +2,7 @@
 /FlameGraph
 
 # 忽略log
-*.log
+*.log 
 
 subscribers.json
 

@@ -39,7 +39,7 @@ pub fn register_handlers(
             return;
         }
         println!("[监控命中] {} 触发观察币种 {} 的观察交易数量 {}, 方向 {} ", formatted ,symbol, qty, 
-            if trade.is_buyer_maker { "买" } else { "卖" });
+            if trade.is_buyer_maker { "卖" } else { "买" });   
         insert_trade(&trade_history, &symbol, qty, trade.clone());
 
 

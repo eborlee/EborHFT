@@ -26,7 +26,7 @@ pub fn compute_symbol_imbalance_series(
             }
 
             for trade in trades {
-                let Some(timestamp) = Utc.timestamp_millis_opt(trade.event_time as i64).single() else {
+                let Some(timestamp) = Utc.timestamp_millis_opt(trade.trade_time as i64).single() else {
                     continue;
                 };
 
@@ -81,6 +81,7 @@ pub fn compute_symbol_imbalance_series(
 pub fn summarize_imbalance_series(
     series: &[(DateTime<Utc>, f64)],
     now: DateTime<Utc>,
+    bar_interval: Duration, 
 ) -> (f64, f64, f64, f64, f64) {
     let mut last_15 = 0.0;
     let mut sum_1h = 0.0;
@@ -88,6 +89,9 @@ pub fn summarize_imbalance_series(
     let mut sum_1d = 0.0;
     let mut sum_3d = 0.0;
 
+    
+
+    // println!("aligned_now: {}", aligned_now);
     for (ts, val) in series.iter().rev() {
         let delta = now.signed_duration_since(*ts);
         if delta <= Duration::minutes(15) {
