@@ -45,6 +45,7 @@ docker run -d \
   -v "${PROJECT_ROOT}/data:/app/data" \
   -v "${PROJECT_ROOT}/scripts:/app/scripts" \
   -v "${PROJECT_ROOT}/backup.json:/app/backup.json" \
+  -v "${PROJECT_ROOT}/subscribers.json:/app/subscribers.json" \
   "${IMAGE_NAME}" > "${LOG_FILE}"
 
 # 从 docker run 输出中读取容器 ID
