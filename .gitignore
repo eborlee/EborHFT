@@ -12,6 +12,6 @@ Dockerfile.rust-centos7.base
 subscribers.json
 backup.json
 
-build.sh
+/build.sh
 !docker/build.sh  # 显式取消忽略 docker 目录下的 build.sh
 config.toml
