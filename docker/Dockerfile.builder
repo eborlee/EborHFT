@@ -29,7 +29,7 @@ RUN ln -sf /usr/local/python3.8/bin/python3.8 /usr/bin/python3 && \
 # ==== 拷贝并安装 Python 项目依赖 ====
 WORKDIR /app
 COPY scripts/requirements.txt scripts/requirements.txt
-RUN pip3 install --no-cache-dir -r scripts/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r scripts/requirements.txt
 
 # ==== 可选版本信息输出 ====
 RUN rustc --version && python3 --version && pip3 --version
