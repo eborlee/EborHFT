@@ -10,5 +10,7 @@
 Dockerfile.rust-centos7.base
 
 subscribers.json
+backup.json
+
 build.sh
 config.toml
