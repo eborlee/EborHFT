@@ -30,6 +30,7 @@ log = "0.4"
 crossbeam-channel = "0.5"
 affinity = "0.1.2"
 core_affinity = "0.5"
+openssl = { version = "0.10", features = ["vendored"] }
 
 toml = "0.8"
 once_cell = "1.19"
