@@ -20,9 +20,10 @@ RUN wget https://www.python.org/ftp/python/3.8.18/Python-3.8.18.tgz && \
 
 # ==== 配置 python3 / pip3 ====
 RUN ln -sf /usr/local/python3.8/bin/python3.8 /usr/bin/python3 && \
-    curl -O https://bootstrap.pypa.io/get-pip.py && \
+    curl -O https://bootstrap.pypa.io/pip/3.8/get-pip.py && \
     python3 get-pip.py && \
     ln -sf /usr/local/bin/pip3 /usr/bin/pip3
+
 
 # ==== 拷贝并安装 Python 项目依赖 ====
 WORKDIR /app
