@@ -18,11 +18,12 @@ RUN wget https://www.python.org/ftp/python/3.8.18/Python-3.8.18.tgz && \
     make -j$(nproc) && \
     make altinstall
 
-# ==== 配置 python3 / pip3 ====
+# === 安装 pip（使用 Python 3.8 专属的 get-pip.py）并软链接 pip3/python3 ===
 RUN ln -sf /usr/local/python3.8/bin/python3.8 /usr/bin/python3 && \
     curl -O https://bootstrap.pypa.io/pip/3.8/get-pip.py && \
     python3 get-pip.py && \
-    ln -sf /usr/local/bin/pip3 /usr/bin/pip3
+    ln -sf $(which pip3) /usr/bin/pip3
+
 
 
 # ==== 拷贝并安装 Python 项目依赖 ====
