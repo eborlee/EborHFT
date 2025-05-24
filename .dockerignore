@@ -1,4 +1,33 @@
+# Rust 构建缓存
 target*
+
+# Git 相关
 .git
+.gitignore
+
+# 日志和临时文件
 *.log
 *.tmp
+logs/
+*.bak
+*.swp
+*.swo
+temp/
+
+# IDE/编辑器相关
+.vscode/
+.idea/
+*.code-workspace
+
+# 测试和文档
+tests/
+docs/
+*.md
+
+# 数据和备份（如不需要打包进镜像）
+data/
+backup.json
+
+# 其他
+.DS_Store
+Thumbs.db
