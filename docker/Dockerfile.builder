@@ -32,4 +32,4 @@ COPY scripts/requirements.txt scripts/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r scripts/requirements.txt
 
 # ==== 可选版本信息输出 ====
-RUN rustc --version && python3 --version && pip3 --version
+RUN rustc --version && python3 --version
