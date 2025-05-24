@@ -15,7 +15,7 @@ CONTAINER_NAME="trade-monitor"
 PROJECT_ROOT=$(cd .. && pwd)
 
 # ✅ 检查 config.toml 和 backup.json 是否为有效文件
-REQUIRED_FILES=("config.toml" "backup.json")
+REQUIRED_FILES=("config.toml" "backup.json" "subscribers.json")
 for file in "${REQUIRED_FILES[@]}"; do
     path="${PROJECT_ROOT}/${file}"
     if [ -d "$path" ]; then
