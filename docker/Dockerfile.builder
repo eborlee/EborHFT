@@ -9,6 +9,11 @@ RUN apt-get update && \
     libffi-dev ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# 替换 yum 源
+RUN curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo && \
+    yum clean all && \
+    yum makecache
+
 # ==== 安装 Python 3.8.18 from source ====
 WORKDIR /opt
 RUN wget https://www.python.org/ftp/python/3.8.18/Python-3.8.18.tgz && \
