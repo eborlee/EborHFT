@@ -14,6 +14,21 @@ CONTAINER_NAME="trade-monitor"
 # 项目根目录路径（用于挂载）
 PROJECT_ROOT=$(cd .. && pwd)
 
+# ✅ 检查 config.toml 和 backup.json 是否为有效文件
+REQUIRED_FILES=("config.toml" "backup.json")
+for file in "${REQUIRED_FILES[@]}"; do
+    path="${PROJECT_ROOT}/${file}"
+    if [ -d "$path" ]; then
+        echo "❌ 错误：'$path' 是目录，必须是文件。请删除后重新提供。"
+        exit 1
+    fi
+    if [ ! -f "$path" ]; then
+        echo "❌ 缺失必要文件：$path"
+        echo "👉 请手动提供 ${file} 后再运行此脚本。"
+        exit 1
+    fi
+done
+
 # 生成唯一日志文件名（包含版本 + 启动时间）
 TIMESTAMP=$(date "+%Y%m%d-%H%M%S")
 LOG_DIR="${PROJECT_ROOT}/logs"
