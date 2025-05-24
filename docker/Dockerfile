@@ -6,6 +6,8 @@ RUN cargo build --release --bin trade_monitor
 
 # === 运行阶段（干净运行环境）===
 FROM centos:7
+RUN curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo && \
+    yum clean all && yum makecache
 
 # 安装运行期必要依赖
 RUN yum install -y ca-certificates && yum clean all
