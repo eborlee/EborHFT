@@ -1,6 +1,9 @@
 # === 编译阶段 ===
 FROM eborhft-builder:stable as builder
 WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release --bin trade_monitor || true
 COPY . .
 RUN cargo build --release --bin trade_monitor
 
@@ -22,9 +25,9 @@ WORKDIR /app
 
 # 拷贝编译产物、配置、数据和脚本
 COPY --from=builder /app/target/release/trade_monitor /app/trade_monitor
-COPY --from=builder /app/config.toml /app/
+# COPY --from=builder /app/config.toml /app/
 # COPY --from=builder /app/data /app/data
-COPY --from=builder /app/scripts /app/scripts
+# COPY --from=builder /app/scripts /app/scripts
 
 # 容器入口
 CMD ["./trade_monitor"]
