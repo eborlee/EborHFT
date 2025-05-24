@@ -12,9 +12,9 @@ RUN curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Ce
 # 安装运行期必要依赖
 RUN yum install -y ca-certificates && yum clean all
 
-# 拷贝 Python3.8 解释器及 site-packages（不含 pip）
+# 拷贝 Python 解释器及完整环境（含 site-packages）
 COPY --from=builder /usr/local/python3.8 /usr/local/python3.8
-COPY --from=builder /usr/local/lib/python3.8 /usr/local/lib/python3.8
+# 创建软链接，方便容器内调用 python3
 RUN ln -sf /usr/local/python3.8/bin/python3.8 /usr/bin/python3
 
 # 设置工作目录
