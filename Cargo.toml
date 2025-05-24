@@ -1,6 +1,6 @@
 [package]
 name = "eborhft"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2024"
 
 [workspace]
@@ -12,7 +12,7 @@ members = [
     "crates/orderbook", "crates/app"]
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.11", features = ["json","multipart", "rustls-tls"] }
 market_agent = { path = "crates/market_agent" }
 event_engine = { path = "crates/event_engine" }
 orderbook = { path = "crates/orderbook" }

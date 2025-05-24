@@ -14,6 +14,7 @@ pub enum EventType {
 pub enum EventPayload {
     AggTrade(AggTradeEvent),
     Depth(DepthEvent),
+    Kline(KlineEvent),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,6 +27,8 @@ pub enum BinanceEvent {
     Depth(DepthEvent),
     // #[serde(rename = "kline")]
     // Kline(KlineEvent),
+    #[serde(rename = "continuous_kline")]
+    Kline(KlineEvent),
 }
 
 impl BinanceEvent {
@@ -33,7 +36,7 @@ impl BinanceEvent {
         match self {
             BinanceEvent::AggTrade(_) => EventType::AggTrade,
             BinanceEvent::Depth(_) => EventType::Depth,
-            // BinanceEvent::Kline(_) => EventType::Kline,
+            BinanceEvent::Kline(_) => EventType::Kline,
         }
     }
 }
@@ -115,3 +118,57 @@ pub struct DepthEvent {
 //     pub quantity: f64,
 //     pub side: String,
 // }
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KlineInner {
+    #[serde(alias = "t")]
+    pub start_time: u64,
+    #[serde(alias = "T")]
+    pub end_time: u64,
+    #[serde(alias = "i")]
+    pub interval: String,
+    #[serde(alias = "f")]
+    pub first_trade_id: u64,
+    #[serde(alias = "L")]
+    pub last_trade_id: u64,
+    #[serde(alias = "o")]
+    pub open: String,
+    #[serde(alias = "c")]
+    pub close: String,
+    #[serde(alias = "h")]
+    pub high: String,
+    #[serde(alias = "l")]
+    pub low: String,
+    #[serde(alias = "v")]
+    pub volume: String,
+    #[serde(alias = "n")]
+    pub trade_count: u64,
+    #[serde(alias = "x")]
+    pub is_final: bool,
+    #[serde(alias = "q")]
+    pub quote_asset_volume: String,
+    #[serde(alias = "V")]
+    pub taker_buy_base_volume: String,
+    #[serde(alias = "Q")]
+    pub taker_buy_quote_volume: String,
+    #[serde(alias = "B")]
+    pub ignore: String
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KlineEvent {
+    #[serde(alias = "e", default)]
+    pub event: String,
+    #[serde(alias = "E")]
+    pub event_time: u64,
+    #[serde(alias = "ps")]
+    pub pair: String,             // ✅ 保留这个
+    #[serde(alias = "ct")]
+    pub contract_type: String,    // ✅ 合约类型，必须有
+    #[serde(alias = "k")]
+    pub kline: KlineInner,
+
+    #[serde(skip)]
+    pub received_timestamp: u128,
+}

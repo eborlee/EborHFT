@@ -1,9 +1,14 @@
 /target
 /FlameGraph
-
+/data
+/temp
+/logs
 # 忽略log
 *.log 
+.dockerignore
+
+Dockerfile.rust-centos7.base
 
 subscribers.json
-
+build.sh
 config.toml

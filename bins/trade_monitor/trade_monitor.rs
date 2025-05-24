@@ -5,16 +5,24 @@ mod trade_store;
 mod types;
 mod telegram;
 mod indicators;
+mod kline_store;
 use crate::config::{get_watched_qty_set, CONFIG};
 use crate::event_handlers::register_handlers;
 use crate::timer::start_timer_loop;
 use crate::trade_store::load_from_file;
 use crate::types::TradeHistory;
-use crate::telegram::{SUBSCRIBERS, send_message_to};
+use crate::telegram::{SUBSCRIBERS, send_message_to, send_photo_to};
 use crate::trade_store::get_all;
 use crate::indicators::{compute_symbol_imbalance_series,summarize_imbalance_series};
-
+use crate::kline_store::load_kline_for_symbol_since;
+use std::fs;
+use std::fs::{create_dir_all, OpenOptions};
+use crate::telegram::parse_time_range_str;
+use crate::telegram::align_to_bar;
+use crate::trade_store::get_recent_trades;
 use std::collections::VecDeque;
+use std::process::Command;
+
 
 use feeder::websocket::WebSocket;
 use feeder::websocket::BinanceWebSocketClient;
@@ -70,6 +78,44 @@ fn format_trade_summary(history: &TradeHistory) -> String {
     lines.join("\n")
 }
 
+pub fn generate_image_for_symbol(
+    time_str: &str,
+    symbol: &str,
+    history: &TradeHistory,
+) -> Option<String> {
+    let bar_interval = Duration::minutes(15);
+    let aligned_now = align_to_bar(Utc::now(), bar_interval);
+
+    let Some(duration) = parse_time_range_str(time_str) else {
+        return None; // ❌ 不返回错误提示，只 silent fail
+    };
+    let since = aligned_now - duration;
+
+    let trades = get_recent_trades(history, symbol, since);
+    let klines = load_kline_for_symbol_since(symbol, "15m", since);
+
+    let tmp_dir = format!("temp/{}_{}", symbol, time_str);
+    let _ = create_dir_all(&tmp_dir);
+
+    let trade_path = format!("{}/trades.json", tmp_dir);
+    let output_path = format!("{}/output.png", tmp_dir);
+
+    let _ = fs::write(&trade_path, serde_json::to_string(&trades).unwrap());
+    let status = Command::new("python3")
+        .arg("scripts/plot_img.py")
+        .arg(&trade_path)
+        .arg(&output_path)
+        .status()
+        .ok()?; // silent fail
+
+    if !status.success() {
+        return None;
+    }
+
+    Some(output_path)
+}
+
+
 
 
 
@@ -95,6 +141,10 @@ async fn run_system() {
         .unwrap();
     ws_client
         .subscribe(vec!["btcusdt@aggTrade"])
+        .await
+        .unwrap();
+    ws_client
+        .subscribe(vec!["btcusdt_perpetual@continuousKline_15m"])
         .await
         .unwrap();
 
@@ -153,8 +203,21 @@ async fn run_system() {
                     symbol.to_uppercase(),aligned_now, v15, h1, h4, d1, d3
                 );
 
+                let image_path_opt = generate_image_for_symbol("1d", &symbol, &trade_history);
+
+
                 for id in &ids {
                     send_message_to(id, &msg).await;
+                    if let Some(ref image_path) = image_path_opt {
+                        send_photo_to(id, image_path, &format!("📈 {} 1d 图像", symbol.to_uppercase())).await;
+                    }
+
+                }
+
+                if let Some(image_path) = image_path_opt {
+                    if let Some(dir) = std::path::Path::new(&image_path).parent() {
+                        let _ = std::fs::remove_dir_all(dir);
+                    }
                 }
             }
         }
@@ -185,7 +248,5 @@ async fn main() {
             println!("🛑 收到 Ctrl+C，准备退出...");
         }
     }
-
-
     println!("🎯 程序已安全退出");
 }

@@ -78,6 +78,10 @@ impl MarketAgent for BinanceMarketAgent {
                     data.received_timestamp = received_timestamp;
                     this.on_depth(data);
                 }
+                Ok(BinanceEvent::Kline(mut data)) => {
+                    data.received_timestamp = received_timestamp;
+                    this.on_kline(data); // ✅ 你要定义这个方法
+                }
                 Err(e) => {
                     eprintln!("JSON解析失败: {} - 原始消息: {}", e, msg);
                 }
@@ -99,6 +103,10 @@ impl MarketAgent for BinanceMarketAgent {
     
     fn on_depth(&mut self, event: event::DepthEvent) {
         self.event_producer.fire(EventType::Depth, EventPayload::Depth(event));
+    }
+
+    fn on_kline(&mut self, event: event::KlineEvent) {
+        self.event_producer.fire(EventType::Kline, EventPayload::Kline(event));
     }
 
     async fn subscribe(&mut self, streams: Vec<&str>) -> Result<(), Box<dyn Error>> {

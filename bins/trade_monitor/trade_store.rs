@@ -6,8 +6,9 @@ use std::sync::Mutex;
 use crate::config::CONFIG;
 use crate::types::TradeHistory;
 use event_engine::event::AggTradeEvent;
-
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use chrono::TimeZone;
 
 /// 向 TradeHistory 中插入一条交易记录（自动维护滑动窗口）
 pub fn insert_trade(history: &TradeHistory, symbol: &str, qty: &String, trade: AggTradeEvent) {
@@ -101,4 +102,19 @@ pub fn load_from_file(history: &TradeHistory, path: &str) {
             println!("[恢复] 未发现本地备份，跳过加载");
         }
     }
+}
+
+
+
+pub fn get_recent_trades(history: &TradeHistory,symbol: &str, since: DateTime<Utc>) -> Vec<AggTradeEvent> {
+    let history = history.lock().unwrap(); // ✅ 显式加锁
+    history.get(symbol)
+        .map(|qty_map| {
+            qty_map.values().flat_map(|trades| {
+                trades.iter()
+                    .filter(|t| Utc.timestamp_millis(t.event_time as i64) >= since)
+                    .cloned()
+            }).collect()
+        })
+        .unwrap_or_default()
 }

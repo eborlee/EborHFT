@@ -1,6 +1,6 @@
 // src/telegram.rs
 use chrono::Utc;
-
+use teloxide::types::InputFile;
 use crate::config::CONFIG;
 use reqwest::Client;
 use std::sync::RwLock;
@@ -9,8 +9,12 @@ use crate::trade_store::get_by_symbol_qty;
 use crate::trade_store::get_all;
 use crate::types::{TradeHistory, WatchedQtySet};
 use crate::indicators::{compute_symbol_imbalance_series,summarize_imbalance_series};
+use crate::trade_store::get_recent_trades;
+use crate::kline_store::load_kline_for_symbol_since;
+use std::fs::{create_dir_all, OpenOptions};
 use teloxide::types::{BotCommand};
 use chrono::{DateTime, Duration, TimeZone};
+use std::process::Command;
 
 // bins/trade_monitor/telegram.rs 顶部添加：
 use teloxide::prelude::*; // 确保引入所有必要类型（尤其是 `Message`）
@@ -26,6 +30,10 @@ use teloxide::requests::RequesterExt;
 use std::fs;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
+
+use std::fs::File;
+use reqwest::multipart;
+
 
 const SUBSCRIBERS_PATH: &str = "subscribers.json";
 
@@ -65,6 +73,34 @@ pub async fn send_message_to(chat_id: &str, text: &str) {
         .await;
 }
 
+
+pub async fn send_photo_to(chat_id: &str, image_path: &str, caption: &str) {
+    let url = format!(
+        "https://api.telegram.org/bot{}/sendPhoto",
+        CONFIG.telegram.token
+    );
+
+    let data = match fs::read(image_path) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let file_part = multipart::Part::bytes(data)
+        .file_name("chart.png")
+        .mime_str("image/png")
+        .unwrap();
+
+    let form = multipart::Form::new()
+        .text("chat_id", chat_id.to_string())
+        .text("caption", caption.to_string())
+        .text("parse_mode", "Markdown")
+        .part("photo", file_part);
+
+    let client = Client::new();
+    let _ = client.post(url).multipart(form).send().await;
+}
+
+
 // pub async fn broadcast_message(text: &str) {
 //     for id in &CONFIG.telegram.allowed_chat_ids {
 //         let _ = send_message_to(id, text).await;
@@ -78,10 +114,12 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
     // 注册命令显示到输入框左侧按钮中
     let commands = vec![
         BotCommand::new("start", "开始使用"),
+        BotCommand::new("imbalance", "【主要】查看偏移"),
+        BotCommand::new("img_1d", "最近一天图示"),
+        BotCommand::new("img_7d", "最近一周图示"),
         BotCommand::new("subscribe", "订阅推送"),
         BotCommand::new("unsubscribe", "取消订阅"),
         BotCommand::new("list", "查看当前监控对象"),
-        BotCommand::new("imbalance", "【主要】查看偏移"),
         BotCommand::new("status", "查看缓存统计"),
         // BotCommand::new("detail", "查询某币种成交明细"),
     ];
@@ -366,6 +404,31 @@ pub async fn start_bot(trade_history: TradeHistory, watched_qty: WatchedQtySet) 
                     }
                 }
 
+                cmd if cmd.starts_with("/img_") =>{
+                    let tf = cmd.strip_prefix("/img_").unwrap(); // "1d"
+                    let symbol = "btcusdt".to_string();
+                    // ✅ 克隆 trade_history 快照（传引用足够）
+                    let cloned_history = {
+                        let lock = trade_history.lock().unwrap();
+                        lock.clone() // 你也可以直接传 trade_history 的引用，不 clone
+                    };
+
+                    if let Some(image_path) = handle_img_request(tf, &symbol, &sender_id, &trade_history).await {
+                        let _ = bot
+                            .send_photo(sender_id, InputFile::file(&image_path))
+                            .caption(format!("📈 {} {} 图像", symbol.to_uppercase(), tf))
+                            .send()
+                            .await;
+
+                        // 清理图像和对应 JSON 临时文件夹
+                        if let Some(parent_dir) = std::path::Path::new(&image_path).parent() {
+                            let _ = std::fs::remove_dir_all(parent_dir);
+                        }
+                    }
+                    
+
+                }
+
 
 
 
@@ -504,4 +567,78 @@ fn format_detail_snapshot(
     }
 
     format!("{} @ {}: 无记录", symbol, qty_key)
+}
+
+
+
+
+
+// async fn send_photo(chat_id: i64, path: &str) {
+//     use crate::telegram::BOT;
+//     let file = InputFile::file(path.to_string());
+//     let _ = BOT.send_photo(chat_id, file)
+//         .caption("📈 成交图")
+//         .await;
+// }
+
+
+/// 用户命令触发后调用
+pub async fn handle_img_request(time_str: &str, symbol: &str, chat_id: &str,history: &TradeHistory,) -> Option<String>{
+    let bar_interval = Duration::minutes(15);
+    let aligned_now = align_to_bar(Utc::now(), bar_interval);
+
+    let Some(duration) = parse_time_range_str(time_str) else {
+        send_message_to(chat_id, "❌ 无效时间格式，如 1h, 3d").await;
+        return None;
+    };
+    let since = aligned_now - duration;
+
+    let trades = get_recent_trades(history, symbol, since);
+    let klines = load_kline_for_symbol_since(symbol, "15m", since);
+
+    let tmp_dir = format!("temp/{}_{}", symbol, time_str);
+    let _ = create_dir_all(&tmp_dir);
+
+    let trade_path = format!("{}/trades.json", tmp_dir);
+    let output_path = format!("{}/output.png", tmp_dir);
+
+    let _ = fs::write(&trade_path, serde_json::to_string(&trades).unwrap());
+
+    let status = Command::new("python3")
+        .arg("scripts/plot_img.py")
+        .arg(&trade_path)
+        .arg(&output_path)
+        .status()
+        .expect("failed to run python script");
+
+    if !status.success() {
+        send_message_to(chat_id, "❌ 图像生成失败").await;
+        return None;
+    }
+
+    Some(output_path) // ✅ 正确返回实际生成的图像路径
+
+
+
+}
+
+pub fn parse_time_range_str(s: &str) -> Option<Duration> {
+    if s.ends_with("min") {
+        let v = s.trim_end_matches("min").parse::<i64>().ok()?;
+        Some(Duration::minutes(v))
+    } else if s.ends_with("h") {
+        let v = s.trim_end_matches("h").parse::<i64>().ok()?;
+        Some(Duration::hours(v))
+    } else if s.ends_with("d") {
+        let v = s.trim_end_matches("d").parse::<i64>().ok()?;
+        Some(Duration::days(v))
+    } else {
+        None
+    }
+}
+
+pub fn align_to_bar(now: DateTime<Utc>, bar_interval: Duration) -> DateTime<Utc> {
+    let secs = now.timestamp();
+    let aligned_secs = (secs / bar_interval.num_seconds()) * bar_interval.num_seconds();
+    Utc.timestamp_opt(aligned_secs, 0).single().unwrap_or(now)
 }

@@ -1,5 +1,6 @@
 use crate::types::{WatchedQtySet, TradeHistory};
 use crate::trade_store::insert_trade;
+use crate::kline_store::save_kline_to_file;
 use event_engine::event::{EventPayload, EventType};
 use event_engine::event_dispatcher::EventDispatcher;
 use event_engine::event_dispatcher::AsyncQueueEventDispatcher;
@@ -11,7 +12,7 @@ pub fn register_handlers(
     trade_history: TradeHistory,
 ) {
     let watched_qty = watched_qty.clone();
-    println!("注册聚合成交事件处理器");
+    println!("即将注册事件处理器");
     dispatcher.register(EventType::AggTrade, Box::new(move |event| {
         // println!("[聚合成交] 处理事件: {:?}\n", event);
         let EventPayload::AggTrade(trade) = &event.data else {
@@ -44,5 +45,19 @@ pub fn register_handlers(
 
 
     }));
+
+    dispatcher.register(EventType::Kline, Box::new(move |event| {
+        let EventPayload::Kline(kline_event) = &event.data else {
+            return;
+        };
+
+        if !kline_event.kline.is_final {
+            return;
+        }
+        // println!("[K线] 处理事件: {:?}\n", event);
+        // ✅ 每条完整的K线都立即落盘
+        save_kline_to_file(&kline_event.pair, kline_event);
+    }));
+
 
 }

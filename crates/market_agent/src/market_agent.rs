@@ -19,6 +19,8 @@ pub trait MarketAgent {
 
     fn on_trade(&mut self, event: event::AggTradeEvent);
 
+    fn on_kline(&mut self, event: event::KlineEvent);
+
     // // 收到 K 线数据时的回调，将原始数据解析后入队事件
     // async fn on_kline(&self, raw_data: String);
 
